@@ -1,0 +1,4 @@
+database_url = 'mysql://root:password@localhost:3307/db_name'
+listen_address = '127.0.0.1:9001'
+jwt_secret = ''
+x_api_key = ''

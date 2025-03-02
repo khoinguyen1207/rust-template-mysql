@@ -1,0 +1,1 @@
+pub const DEFAULT_NETWORK: &str = "mainnet";
