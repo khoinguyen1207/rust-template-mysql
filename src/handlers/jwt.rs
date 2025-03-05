@@ -1,10 +1,11 @@
-use actix_web::{dev::Payload, Error as ActixWebError};
-use actix_web::{error::InternalError, http, FromRequest, HttpMessage, HttpRequest, HttpResponse};
+use actix_web::dev::Payload;
+use actix_web::ResponseError;
+use actix_web::{error::InternalError, http, FromRequest, HttpMessage, HttpRequest};
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde_derive::{Deserialize, Serialize};
-use serde_json::json;
 use std::future::{ready, Ready};
 use crate::configs::configs;
+use crate::serializes::error::AppError;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TokenPayload {
@@ -20,7 +21,7 @@ pub struct JwtMiddleware {
 }
 
 impl FromRequest for JwtMiddleware {
-    type Error = ActixWebError;
+    type Error = actix_web::Error;
     type Future = Ready<Result<Self, Self::Error>>;
     fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
         let jwt_secret: String = configs::get("jwt_secret");
@@ -35,10 +36,8 @@ impl FromRequest for JwtMiddleware {
             });
 
         if token.is_none() {
-            let json_response = HttpResponse::Unauthorized().json(json!({
-                "message": "You are not logged in, please provide token"
-            }));
-            let error = InternalError::from_response("", json_response).into();
+            let error = AppError::new(401).message("You are not logged in, please provide token").code("UNAUTHORIZED");
+            let error = InternalError::from_response("", error.error_response()).into();
             return ready(Err(error));
         }
 
@@ -49,15 +48,13 @@ impl FromRequest for JwtMiddleware {
         ) {
             Ok(c) => c.claims,
             Err(_) => {
-                let json_response = HttpResponse::Unauthorized().json(json!({
-                    "message": "Invalid token"
-                }));
-                return ready(Err(InternalError::from_response("", json_response).into()));
+                let error = AppError::new(401).message("Invalid token").code("UNAUTHORIZED");
+                return ready(Err(InternalError::from_response("", error.error_response()).into()));
             }
         };
 
         let address = payload.sub;
-        req.extensions_mut().insert::<String>(address.clone());
+        req.extensions_mut().insert(address.clone());
 
         ready(Ok(JwtMiddleware {
             address: address.clone(),
