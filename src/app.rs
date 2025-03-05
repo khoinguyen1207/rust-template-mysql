@@ -3,7 +3,7 @@ use actix_cors::Cors;
 use crate::configs::configs;
 
 use crate::handlers::users;
-use crate::repositories::db::DB_POOL;
+use crate::repositories::db::get_db_pool;
 use crate::repositories::db::migrate_db;
 use crate::repositories::users::UserDao;
 use crate::services::users::UserSrv;
@@ -14,7 +14,7 @@ pub fn init_routes(cfg: &mut web::ServiceConfig) {
 
 pub async fn create_app() -> std::io::Result<()> {
     // Init DB
-    let db_pool = DB_POOL.clone();
+    let db_pool = get_db_pool();
 
     // migrate db
     if let Err(e) = migrate_db().await {
